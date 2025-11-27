@@ -1,82 +1,79 @@
-# Lightweight React Template for KAVIA
+# Notes Frontend (Ocean Professional)
 
-This project provides a minimal React template with a clean, modern UI and minimal dependencies.
+A modern single-page React UI for creating, editing, listing, searching and deleting notes. It uses Supabase if configured, otherwise falls back to localStorage so it works out-of-the-box.
 
 ## Features
-
-- **Lightweight**: No heavy UI frameworks - uses only vanilla CSS and React
-- **Modern UI**: Clean, responsive design with KAVIA brand styling
-- **Fast**: Minimal dependencies for quick loading times
-- **Simple**: Easy to understand and modify
+- Create, edit (title + markdown/plain), delete notes
+- List and search notes with debounce
+- Optimistic UI updates
+- Supabase persistence when configured; localStorage fallback when not
+- Ocean Professional theme with blue & amber accents
+- Accessible keyboard focus and search shortcut (Ctrl/⌘ + K)
+- Optional Markdown preview toggle in editor
 
 ## Getting Started
 
-In the project directory, you can run:
-
-### `npm start`
-
-Runs the app in development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-### `npm test`
-
-Launches the test runner in interactive watch mode.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-## Customization
-
-### Colors
-
-The main brand colors are defined as CSS variables in `src/App.css`:
-
-```css
-:root {
-  --kavia-orange: #E87A41;
-  --kavia-dark: #1A1A1A;
-  --text-color: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.7);
-  --border-color: rgba(255, 255, 255, 0.1);
-}
+Install dependencies:
+```
+npm install
 ```
 
-### Components
+Run locally:
+```
+npm start
+```
+App runs at http://localhost:3000.
 
-This template uses pure HTML/CSS components instead of a UI framework. You can find component styles in `src/App.css`. 
+## Persistence options
 
-Common components include:
-- Buttons (`.btn`, `.btn-large`)
-- Container (`.container`)
-- Navigation (`.navbar`)
-- Typography (`.title`, `.subtitle`, `.description`)
+By default, the app uses localStorage. To enable Supabase (optional):
 
-## Learn More
+1) Create table `notes`:
+```
+create table if not exists public.notes (
+  id uuid primary key,
+  title text,
+  content text,
+  updated_at timestamp with time zone
+);
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+2) Add environment variables (see .env.example):
+- REACT_APP_SUPABASE_URL
+- REACT_APP_SUPABASE_KEY
 
-### Code Splitting
+If you plan to use Supabase in this project, install the client library:
+```
+npm install @supabase/supabase-js
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+Create a `.env` file:
+```
+REACT_APP_SUPABASE_URL=your-url
+REACT_APP_SUPABASE_KEY=your-key
+```
 
-### Analyzing the Bundle Size
+The app will automatically detect these and use Supabase. If initialization fails, the app logs a warning and continues with localStorage.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## Styling
 
-### Making a Progressive Web App
+Theme tokens and component styles live in `src/styles/theme.css` and are applied across Sidebar, NotesList, and NoteEditor to achieve the Ocean Professional look.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## Project structure
+- src/services/NotesService.js: Storage abstraction (Supabase or localStorage)
+- src/context/NotesContext.js: Global state + optimistic CRUD
+- src/components/*: UI components
+- src/utils/debounce.js: Small utility for debounced search
+- src/App.js: Main layout (sidebar + main content)
 
-### Advanced Configuration
+## Environment variables
+See `.env.example` for optional variables: REACT_APP_SUPABASE_URL, REACT_APP_SUPABASE_KEY and other common app vars.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## Accessibility
+- Keyboard navigation for list and actions
+- Search shortcut: Ctrl/⌘ + K
+- Focus-visible ring and ARIA roles/labels for primary regions
 
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## Notes
+- When using Supabase, ensure Row Level Security (RLS) rules fit your use case, or disable RLS for demo/testing.
+- The app does not manage Supabase auth; it writes notes anonymously with the provided service key.
