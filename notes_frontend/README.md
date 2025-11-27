@@ -28,7 +28,7 @@ App runs at http://localhost:3000.
 
 By default, the app uses localStorage. To enable Supabase (optional):
 
-1) Create table `notes`:
+1) Create table `notes` (see also SUPABASE.md):
 ```
 create table if not exists public.notes (
   id uuid primary key,
@@ -36,7 +36,15 @@ create table if not exists public.notes (
   content text,
   updated_at timestamp with time zone
 );
+
+create index if not exists notes_updated_at_idx on public.notes (updated_at desc);
 ```
+
+RLS: For demos you can disable RLS:
+```
+alter table public.notes disable row level security;
+```
+For production, enable RLS and set policies to your needs.
 
 2) Add environment variables (see .env.example):
 - REACT_APP_SUPABASE_URL
@@ -47,13 +55,17 @@ If you plan to use Supabase in this project, install the client library:
 npm install @supabase/supabase-js
 ```
 
-Create a `.env` file:
+Create a `.env` file (or copy example):
 ```
+cp .env.example .env
+# then edit .env
 REACT_APP_SUPABASE_URL=your-url
 REACT_APP_SUPABASE_KEY=your-key
 ```
 
-The app will automatically detect these and use Supabase. If initialization fails, the app logs a warning and continues with localStorage.
+Behavior:
+- When Supabase is properly initialized, the UI shows a "Supabase" badge.
+- If env vars are present but initialization fails (e.g., wrong URL/key, missing library), the app falls back to localStorage for reliability and the UI shows "Local", along with an error banner describing the failure.
 
 ## Styling
 

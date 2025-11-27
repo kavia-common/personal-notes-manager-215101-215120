@@ -24,7 +24,8 @@ export function NotesProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
 
-  const isSupabase = Boolean(process.env.REACT_APP_SUPABASE_URL && process.env.REACT_APP_SUPABASE_KEY);
+  // Reflect actual backend in use instead of only environment presence.
+  const isSupabase = Boolean(service?.isSupabase);
 
   useEffect(() => {
     let mounted = true;

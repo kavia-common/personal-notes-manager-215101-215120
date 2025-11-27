@@ -14,16 +14,23 @@ export function getNotesService() {
       // Lazy require so that build does not need @supabase/supabase-js installed
       // eslint-disable-next-line global-require
       const supabaseLib = require('@supabase/supabase-js');
-      const createClient = supabaseLib.createClient || supabaseLib.default?.createClient;
+      const createClient =
+        supabaseLib.createClient || supabaseLib.default?.createClient;
       if (typeof createClient === 'function') {
         const client = createClient(url, key, {
-          auth: { persistSession: false }
+          auth: { persistSession: false },
         });
         return new SupabaseNotesService(client);
       }
-      console.warn('Supabase library found but createClient not available, using LocalStorage.');
+      console.warn(
+        'Supabase library found but createClient not available, using LocalStorage.'
+      );
     } catch (e) {
-      console.warn('Supabase not available or failed to initialize, falling back to LocalStorage.', e);
+      // Keep app functional but make sure UI does not think Supabase is active.
+      console.warn(
+        'Supabase not available or failed to initialize, falling back to LocalStorage.',
+        e
+      );
     }
   }
   return new LocalStorageNotesService();
@@ -32,6 +39,11 @@ export function getNotesService() {
 const STORAGE_KEY = 'pnm.notes.v1';
 
 class LocalStorageNotesService {
+  // PUBLIC_INTERFACE
+  /** Whether this service uses Supabase (always false here). */
+  get isSupabase() {
+    return false;
+  }
   /**
    * PUBLIC_INTERFACE
    * list returns all notes sorted by updated_at desc
@@ -92,6 +104,12 @@ class SupabaseNotesService {
   constructor(client) {
     this.client = client;
     this.table = 'notes';
+  }
+
+  // PUBLIC_INTERFACE
+  /** Whether this service uses Supabase (always true here). */
+  get isSupabase() {
+    return true;
   }
 
   /**
