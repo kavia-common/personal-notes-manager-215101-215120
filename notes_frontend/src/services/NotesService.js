@@ -8,6 +8,8 @@ import { v4 as uuidv4 } from 'uuid';
 export function getNotesService() {
   const url = process.env.REACT_APP_SUPABASE_URL;
   const key = process.env.REACT_APP_SUPABASE_KEY;
+  // Allow configuring table name; default to 'notes'
+  const table = (process.env.REACT_APP_SUPABASE_TABLE || 'notes').trim();
 
   if (url && key) {
     try {
@@ -20,7 +22,7 @@ export function getNotesService() {
         const client = createClient(url, key, {
           auth: { persistSession: false },
         });
-        return new SupabaseNotesService(client);
+        return new SupabaseNotesService(client, table);
       }
       console.warn(
         'Supabase library found but createClient not available, using LocalStorage.'
@@ -101,9 +103,26 @@ class LocalStorageNotesService {
 }
 
 class SupabaseNotesService {
-  constructor(client) {
+  constructor(client, tableName = 'notes') {
     this.client = client;
-    this.table = 'notes';
+    this.table = tableName || 'notes';
+  }
+
+  // Identify common "table not found / schema cache" messages from PostgREST/Supabase
+  _isMissingTableError(error) {
+    if (!error) return false;
+    const msg = String(error.message || '').toLowerCase();
+    const code = error.code || '';
+    // Known PostgREST/PG patterns:
+    // - relation "public.notes" does not exist
+    // - Could not find the table public.notes in the schema cache
+    // - 42P01 is undefined_table in Postgres
+    return (
+      msg.includes('does not exist') ||
+      msg.includes('not exist') && msg.includes('relation') ||
+      msg.includes('schema cache') && msg.includes('could not find the table') ||
+      code === '42P01'
+    );
   }
 
   // PUBLIC_INTERFACE
@@ -120,7 +139,12 @@ class SupabaseNotesService {
     const { data, error } = await this.client.from(this.table)
       .select('id,title,content,updated_at')
       .order('updated_at', { ascending: false });
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (this._isMissingTableError(error)) {
+        throw new Error(`Supabase table "${this.table}" is missing. Please create it or set REACT_APP_SUPABASE_TABLE. Falling back to LocalStorage is recommended when Supabase is not ready.`);
+      }
+      throw new Error(error.message);
+    }
     return data || [];
   }
 
@@ -134,7 +158,10 @@ class SupabaseNotesService {
       .eq('id', id)
       .single();
     if (error) {
-      if (error.code === 'PGRST116') return null;
+      if (error.code === 'PGRST116') return null; // not found
+      if (this._isMissingTableError(error)) {
+        throw new Error(`Supabase table "${this.table}" is missing. Please create it or set REACT_APP_SUPABASE_TABLE.`);
+      }
       throw new Error(error.message);
     }
     return data;
@@ -148,7 +175,12 @@ class SupabaseNotesService {
     const now = new Date().toISOString();
     const note = { id: uuidv4(), title: title || 'Untitled', content: content || '', updated_at: now };
     const { data, error } = await this.client.from(this.table).insert(note).select().single();
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (this._isMissingTableError(error)) {
+        throw new Error(`Supabase table "${this.table}" is missing. Please create it or set REACT_APP_SUPABASE_TABLE.`);
+      }
+      throw new Error(error.message);
+    }
     return data;
   }
 
@@ -162,7 +194,12 @@ class SupabaseNotesService {
       .eq('id', id)
       .select()
       .single();
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (this._isMissingTableError(error)) {
+        throw new Error(`Supabase table "${this.table}" is missing. Please create it or set REACT_APP_SUPABASE_TABLE.`);
+      }
+      throw new Error(error.message);
+    }
     return data;
   }
 
@@ -172,7 +209,12 @@ class SupabaseNotesService {
    */
   async remove(id) {
     const { error } = await this.client.from(this.table).delete().eq('id', id);
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (this._isMissingTableError(error)) {
+        throw new Error(`Supabase table "${this.table}" is missing. Please create it or set REACT_APP_SUPABASE_TABLE.`);
+      }
+      throw new Error(error.message);
+    }
     return { id };
   }
 }

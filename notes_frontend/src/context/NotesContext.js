@@ -18,7 +18,7 @@ export function useNotes() {
  * NotesProvider loads notes and provides optimistic CRUD operations
  */
 export function NotesProvider({ children }) {
-  const service = useMemo(() => getNotesService(), []);
+  const [service, setService] = useState(() => getNotesService());
   const [notes, setNotes] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -36,7 +36,31 @@ export function NotesProvider({ children }) {
         setNotes(data);
         if (data.length) setSelectedId(data[0].id);
       })
-      .catch(e => { if (mounted) setErr(e.message || String(e)); })
+      .catch(e => {
+        if (!mounted) return;
+        // If Supabase service fails (e.g., missing table), transparently fall back to LocalStorage
+        if (service?.isSupabase) {
+          const fallback = getNotesService(); // When env present but init failed it returns LocalStorage
+          if (!fallback.isSupabase) {
+            setService(fallback);
+            // Load from fallback store
+            fallback.list().then(ls => {
+              if (!mounted) return;
+              setNotes(ls);
+            }).catch(fe => {
+              if (!mounted) return;
+              setErr(fe.message || String(fe));
+            }).finally(() => {
+              if (mounted) setLoading(false);
+            });
+            // Surface the original Supabase error as info banner
+            setErr(e.message || String(e));
+            return;
+          }
+        }
+        // Non-supabase or other errors
+        setErr(e.message || String(e));
+      })
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, [service]);

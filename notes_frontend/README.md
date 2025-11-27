@@ -49,6 +49,7 @@ For production, enable RLS and set policies to your needs.
 2) Add environment variables (see .env.example):
 - REACT_APP_SUPABASE_URL
 - REACT_APP_SUPABASE_KEY
+- REACT_APP_SUPABASE_TABLE (optional, default: notes)
 
 If you plan to use Supabase in this project, install the client library:
 ```
@@ -66,6 +67,7 @@ REACT_APP_SUPABASE_KEY=your-key
 Behavior:
 - When Supabase is properly initialized, the UI shows a "Supabase" badge.
 - If env vars are present but initialization fails (e.g., wrong URL/key, missing library), the app falls back to localStorage for reliability and the UI shows "Local", along with an error banner describing the failure.
+- If the specified table is missing (e.g., "Could not find the table public.notes in the schema cache" or relation does not exist), the app now detects this and surfaces a clear message. On initial load it will automatically fall back to LocalStorage so the app remains usable.
 
 ## Styling
 
